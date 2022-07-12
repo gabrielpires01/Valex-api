@@ -81,13 +81,14 @@ const getTransactions = async (id:number) => {
 	}
 }
 
-const blockCard = async (id:number, password: string) => {
+const blockCard = async (id:number, password: string, type: "block" | "unblock") => {
 	const card = await getCard(id);
 	cardIsExpired(card.expirationDate);
-	cardIsBlocked(card.isBlocked);
-	passwordVerification(card.password, password)
+	cardIsBlocked(card.isBlocked, type);
+	await passwordVerification(card.password, password)
 
-	await cardRepo.update(id, {isBlocked: true})
+	if (type === "block") await cardRepo.update(id, {isBlocked: true})
+	if (type === "unblock") await cardRepo.update(id, {isBlocked: false})
 
 	return
 }
@@ -101,8 +102,9 @@ const getCard = async (id: number) => {
 	return card
 }
 
-const cardIsBlocked = (isBlocked: boolean) => {
-	if (isBlocked) throw {type: "fobidden", message: "Card is already blocked"}
+const cardIsBlocked = (isBlocked: boolean, type: "block" | "unblock") => {
+	if (isBlocked && type === "block") throw {type: "forbidden", message: "Card is already blocked"}
+	if (!isBlocked && type === "unblock") throw {type: "forbidden", message: "Card is already unblocked"}
 	return 
 }
 
@@ -120,7 +122,7 @@ const securityCodeIsEqual = (encryptedCVC: string, CVC: string) => {
 	return
 }
 
-const passwordVerification =async (hashedPassword:string, password) => {
+const passwordVerification =async (hashedPassword:string, password: string) => {
 	if(!bcrypt.compareSync(password, hashedPassword)) throw {type: "not-acceptable", message: "Wrong password"}
 	return
 }
