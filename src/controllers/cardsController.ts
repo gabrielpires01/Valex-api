@@ -1,20 +1,10 @@
 import { Request, Response } from "express";
-import * as employeeService from "../repositories/employeeRepository.js";
-import * as cardRepo from "../repositories/cardRepository.js";
 import * as cardService from "../services/cardsService.js"
 
 const createCard = async(req: Request, res: Response) => {
 	const { id, type } = req.body;
 
-	const employee = await employeeService.findById(id);
-	if (!employee) throw {type: "not-found", message: "Employee doesnt exist"}
-
-	const alreadyHasCard = await cardRepo.findByTypeAndEmployeeId(type, id);
-	if (alreadyHasCard) throw {type: "conflict", message: "Employee already has this type of card"}
-
-	const { card, cardCVC } = cardService.createCard(employee.fullName, id, type);
-
-	await cardRepo.insert(card)
+	const { card, cardCVC } = await cardService.createCard(id, type);
 
 	return res.status(201).send({
 		number: card.number,
@@ -33,15 +23,24 @@ const activateCard =async (req: Request, res: Response) => {
 }
 
 const getAllTransactions =async (req:Request, res: Response) => {
-	const { id } = req.body;
+	const { id } = req.params;
 
-	const transactions = await cardService.getTransactions(id)
+	const transactions = await cardService.getTransactions(Number(id))
 
 	return res.status(200).send(transactions)
+}
+
+const blockCard =async (req:Request, res: Response) => {
+	const { id, password } = req.body;
+	
+	await cardService.blockCard(id, password)
+
+	return res.sendStatus(201)
 }
 
 export {
 	createCard,
 	activateCard,
-	getAllTransactions
+	getAllTransactions,
+	blockCard,
 }

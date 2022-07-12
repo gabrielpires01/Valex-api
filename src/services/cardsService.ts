@@ -1,6 +1,7 @@
 import * as cardRepo from "../repositories/cardRepository.js";
 import * as paymentRepo from "../repositories/paymentRepository.js";
 import * as recharRepo from "../repositories/rechargeRepository.js";
+import * as employeeService from "../repositories/employeeRepository.js";
 
 import { faker } from "@faker-js/faker";
 import bcrypt from "bcrypt";
@@ -11,14 +12,20 @@ import Cryptr from "cryptr";
 const cryptr = new Cryptr(process.env.PASSWORD);
 
 
-const createCard = (fullName: String, id: number, type: cardRepo.TransactionTypes ) => {
+const createCard = async ( id: number, type: cardRepo.TransactionTypes ) => {
 	if(!type || !id) throw {type: "bad-request", message: "Missing something in the request"}
+
+	const employee = await employeeService.findById(id);
+	if (!employee) throw {type: "not-found", message: "Employee doesnt exist"}
+
+	const alreadyHasCard = await cardRepo.findByTypeAndEmployeeId(type, id);
+	if (alreadyHasCard) throw {type: "conflict", message: "Employee already has this type of card"}
 
 	const cardNumber = faker.finance.creditCardNumber();
 	const cardCVC = faker.finance.creditCardCVV();
 	const encryptedCVC = cryptr.encrypt(cardCVC);
 	const expDate = createExpDate();
-	const formatedName = formatName(fullName);
+	const formatedName = formatName(employee.fullName);
 
 	const card = {
 		employeeId: id,
@@ -33,6 +40,8 @@ const createCard = (fullName: String, id: number, type: cardRepo.TransactionType
 		type
 	}
 
+	await cardRepo.insert(card)
+
 	return {card, cardCVC}
 
 }
@@ -42,7 +51,7 @@ const activateCard = async (id: number, cvc: string, password: string) => {
 	if (card.password) throw {type: "forbidden", message: "Card already activated"}
 
 	securityCodeIsEqual(card.securityCode, cvc)
-	await cardIsExpired(card.expirationDate)
+	cardIsExpired(card.expirationDate)
 
 	const hashPassword = bcrypt.hashSync(password, 10);
 
@@ -72,13 +81,29 @@ const getTransactions = async (id:number) => {
 	}
 }
 
+const blockCard = async (id:number, password: string) => {
+	const card = await getCard(id);
+	cardIsExpired(card.expirationDate);
+	cardIsBlocked(card.isBlocked);
+	passwordVerification(card.password, password)
+
+	await cardRepo.update(id, {isBlocked: true})
+
+	return
+}
+
 const getCard = async (id: number) => {
 	if(!id) throw {type: "bad-request", message: "Missing something in the request"}
-
+	
 	const card = await cardRepo.findById(id)
 	if(!card) throw {type: "not-found", message: "Card doesnt exist"}
 
 	return card
+}
+
+const cardIsBlocked = (isBlocked: boolean) => {
+	if (isBlocked) throw {type: "fobidden", message: "Card is already blocked"}
+	return 
 }
 
 const cardIsExpired = async (expDate: string) => {
@@ -92,6 +117,11 @@ const securityCodeIsEqual = (encryptedCVC: string, CVC: string) => {
 	const decriptedCVC = cryptr.decrypt(encryptedCVC);
 	if (decriptedCVC !== CVC) throw {type: "not-acceptable", message: "Wrong cvc number"}
 
+	return
+}
+
+const passwordVerification =async (hashedPassword:string, password) => {
+	if(!bcrypt.compareSync(password, hashedPassword)) throw {type: "not-acceptable", message: "Wrong password"}
 	return
 }
 
@@ -117,4 +147,5 @@ export {
 	createCard,
 	activateCard,
 	getTransactions,
+	blockCard,
 }
