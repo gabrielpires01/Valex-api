@@ -33,7 +33,15 @@ const getAllTransactions =async (req:Request, res: Response) => {
 const blockCard =async (req:Request, res: Response) => {
 	const { id, password } = req.body;
 	
-	await cardService.blockCard(id, password)
+	await cardService.blockCard(id, password, "block")
+
+	return res.sendStatus(201)
+}
+
+const unblockCard =async (req:Request, res: Response) => {
+	const { id, password } = req.body;
+	
+	await cardService.blockCard(id, password, "unblock")
 
 	return res.sendStatus(201)
 }
@@ -43,4 +51,5 @@ export {
 	activateCard,
 	getAllTransactions,
 	blockCard,
+	unblockCard,
 }
