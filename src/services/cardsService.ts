@@ -29,7 +29,7 @@ const createCard = (fullName: String, id: number, type: TransactionTypes ) => {
 		type
 	}
 
-	return card
+	return {card, cardCVC}
 
 }
 
@@ -81,7 +81,7 @@ const formatName = (fullname : String) => {
 const createExpDate = () => {
 	const expDate = new Date();
 	expDate.setFullYear(expDate.getFullYear() + 5)
-	return expDate.toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'}).slice(3)
+	return expDate.toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'})
 }
 
 

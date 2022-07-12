@@ -12,11 +12,16 @@ const createCard = async(req: Request, res: Response) => {
 	const alreadyHasCard = await findByTypeAndEmployeeId(type, id);
 	if (alreadyHasCard) throw {type: "conflict", message: "Employee already has this type of card"}
 
-	const card = cardService.createCard(employee.fullName, id, type);
+	const { card, cardCVC } = cardService.createCard(employee.fullName, id, type);
 
 	await insert(card)
 
-	return res.status(201).send("Card Created")
+	return res.status(201).send({
+		number: card.number,
+		name: card.cardholderName,
+		securityCode: cardCVC,
+		expDate: card.expirationDate
+	})
 }
 
 const activateCard =async (req: Request, res: Response) => {
