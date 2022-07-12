@@ -9,7 +9,7 @@ import bcrypt from "bcrypt";
 import Cryptr from "cryptr";
 
 
-const cryptr = new Cryptr(process.env.PASSWORD);
+const cryptr = new Cryptr(process.env.PASSWORD || "12345");
 
 export type ActionTypes = 
 	"block" | 
