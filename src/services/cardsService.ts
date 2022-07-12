@@ -14,7 +14,8 @@ const cryptr = new Cryptr(process.env.PASSWORD);
 export type ActionTypes = 
 	"block" | 
 	"unblock" | 
-	"recharge";
+	"recharge" |
+	"purchase";
 
 const createCard = async ( id: number, type: cardRepo.TransactionTypes ) => {
 	if(!type || !id) throw {type: "bad-request", message: "Missing something in the request"}
@@ -52,8 +53,7 @@ const createCard = async ( id: number, type: cardRepo.TransactionTypes ) => {
 
 const activateCard = async (id: number, cvc: string, password: string) => {
 	const card = await getCard(id)
-	if (card.password) throw {type: "forbidden", message: "Card already activated"}
-
+	cardisActive(card.password, "activate")
 	securityCodeIsEqual(card.securityCode, cvc)
 	cardIsExpired(card.expirationDate)
 
@@ -109,6 +109,7 @@ export const getCard = async (id: number) => {
 export const cardIsBlocked = (isBlocked: boolean, type: ActionTypes) => {
 	if (isBlocked && type === "block") throw {type: "forbidden", message: "Card is already blocked"}
 	if (!isBlocked && type === "unblock") throw {type: "forbidden", message: "Card is already unblocked"}
+	if (isBlocked && (type === "recharge" || type === "purchase")) throw {type: "forbidden", message: "Card is blocked"}
 	return 
 }
 
@@ -119,6 +120,12 @@ export const cardIsExpired = async (expDate: string) => {
 	return
 }
 
+export const cardisActive = (password: string, type: "activate" | "check") => {
+	if (password && type === "activate") throw {type: "forbidden", message: "Card already activated"}
+	if (!password && type === "check") throw {type: "forbidden", message: "Card not activated"}
+	return
+}
+
 const securityCodeIsEqual = (encryptedCVC: string, CVC: string) => {
 	const decriptedCVC = cryptr.decrypt(encryptedCVC);
 	if (decriptedCVC !== CVC) throw {type: "not-acceptable", message: "Wrong cvc number"}
@@ -126,7 +133,7 @@ const securityCodeIsEqual = (encryptedCVC: string, CVC: string) => {
 	return
 }
 
-const passwordVerification =async (hashedPassword:string, password: string) => {
+export const passwordVerification =async (hashedPassword:string, password: string) => {
 	if(!bcrypt.compareSync(password, hashedPassword)) throw {type: "not-acceptable", message: "Wrong password"}
 	return
 }
