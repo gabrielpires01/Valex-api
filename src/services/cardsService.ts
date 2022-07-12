@@ -11,6 +11,10 @@ import Cryptr from "cryptr";
 
 const cryptr = new Cryptr(process.env.PASSWORD);
 
+export type ActionTypes = 
+	"block" | 
+	"unblock" | 
+	"recharge";
 
 const createCard = async ( id: number, type: cardRepo.TransactionTypes ) => {
 	if(!type || !id) throw {type: "bad-request", message: "Missing something in the request"}
@@ -81,7 +85,7 @@ const getTransactions = async (id:number) => {
 	}
 }
 
-const blockCard = async (id:number, password: string, type: "block" | "unblock") => {
+const blockCard = async (id:number, password: string, type: ActionTypes) => {
 	const card = await getCard(id);
 	cardIsExpired(card.expirationDate);
 	cardIsBlocked(card.isBlocked, type);
@@ -93,7 +97,7 @@ const blockCard = async (id:number, password: string, type: "block" | "unblock")
 	return
 }
 
-const getCard = async (id: number) => {
+export const getCard = async (id: number) => {
 	if(!id) throw {type: "bad-request", message: "Missing something in the request"}
 	
 	const card = await cardRepo.findById(id)
@@ -102,13 +106,13 @@ const getCard = async (id: number) => {
 	return card
 }
 
-const cardIsBlocked = (isBlocked: boolean, type: "block" | "unblock") => {
+export const cardIsBlocked = (isBlocked: boolean, type: ActionTypes) => {
 	if (isBlocked && type === "block") throw {type: "forbidden", message: "Card is already blocked"}
 	if (!isBlocked && type === "unblock") throw {type: "forbidden", message: "Card is already unblocked"}
 	return 
 }
 
-const cardIsExpired = async (expDate: string) => {
+export const cardIsExpired = async (expDate: string) => {
 	if (expDate < new Date().toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'})) {
 		throw {type: "not-acceptable", message: "Card ahs already expired"}
 	}
