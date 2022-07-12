@@ -1,8 +1,9 @@
-import { cardIsBlocked, cardIsExpired, getCard } from "./cardsService.js"
+import { cardisActive, cardIsBlocked, cardIsExpired, getCard } from "./cardsService.js"
 import * as rechargeRepo from "../repositories/rechargeRepository.js"
 
 const rechargeCard =async (id:number, amount: number) => {
 	const card = await getCard(id);
+	cardisActive(card.password, "check")
 	cardIsExpired(card.expirationDate);
 	cardIsBlocked(card.isBlocked, "recharge");
 
