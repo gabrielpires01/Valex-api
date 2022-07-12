@@ -7,10 +7,10 @@ const createCard = async(req: Request, res: Response) => {
 	const { id, type } = req.body;
 
 	const employee = await findById(id);
-	if (!employee) return res.sendStatus(404)
+	if (!employee) throw {type: "not-found", message: "Employee doesnt exist"}
 
 	const alreadyHasCard = await findByTypeAndEmployeeId(type, id);
-	if (alreadyHasCard) return res.sendStatus(401)
+	if (alreadyHasCard) throw {type: "conflict", message: "Employee already has this type of card"}
 
 	const card = cardService.createCard(employee.fullName, id, type);
 
@@ -19,6 +19,15 @@ const createCard = async(req: Request, res: Response) => {
 	return res.status(201).send("Card Created")
 }
 
+const activateCard =async (req: Request, res: Response) => {
+	const {id, cvc, password } = req.body;
+
+	await cardService.activateCard(id, cvc, password);
+
+	return res.sendStatus(201)
+}
+
 export {
 	createCard,
+	activateCard
 }
