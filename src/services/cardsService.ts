@@ -1,13 +1,17 @@
-import { findById, TransactionTypes, update } from "../repositories/cardRepository.js";
+import * as cardRepo from "../repositories/cardRepository.js";
+import * as paymentRepo from "../repositories/paymentRepository.js";
+import * as recharRepo from "../repositories/rechargeRepository.js";
+
 import { faker } from "@faker-js/faker";
 import bcrypt from "bcrypt";
 
 import Cryptr from "cryptr";
+
+
 const cryptr = new Cryptr(process.env.PASSWORD);
 
 
-const createCard = (fullName: String, id: number, type: TransactionTypes ) => {
-
+const createCard = (fullName: String, id: number, type: cardRepo.TransactionTypes ) => {
 	if(!type || !id) throw {type: "bad-request", message: "Missing something in the request"}
 
 	const cardNumber = faker.finance.creditCardNumber();
@@ -42,12 +46,36 @@ const activateCard = async (id: number, cvc: string, password: string) => {
 
 	const hashPassword = bcrypt.hashSync(password, 10);
 
-	await update(id, {password: hashPassword, isBlocked: false})
+	await cardRepo.update(id, {password: hashPassword, isBlocked: false})
 	return 
 }
 
+const getTransactions = async (id:number) => {
+	await getCard(id)
+
+	const transactions = await paymentRepo.findByCardId(id);
+	const recharges = await recharRepo.findByCardId(id);
+
+	const transactionSum = transactions.reduce((prev: number, curr: paymentRepo.Payment) => {
+		return +prev + curr.amount
+	},0)
+	const rechargesSum = recharges.reduce((prev: number, curr: recharRepo.Recharge) => {
+		return +prev + curr.amount
+	},0)
+
+	const total = rechargesSum - transactionSum;
+
+	return {
+		balance: total,
+		transactions,
+		recharges
+	}
+}
+
 const getCard = async (id: number) => {
-	const card = await findById(id)
+	if(!id) throw {type: "bad-request", message: "Missing something in the request"}
+
+	const card = await cardRepo.findById(id)
 	if(!card) throw {type: "not-found", message: "Card doesnt exist"}
 
 	return card
@@ -88,4 +116,5 @@ const createExpDate = () => {
 export {
 	createCard,
 	activateCard,
+	getTransactions,
 }
