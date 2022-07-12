@@ -54,7 +54,7 @@ const getCard = async (id: number) => {
 }
 
 const cardIsExpired = async (expDate: string) => {
-	if (expDate < new Date().toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'}).slice(3)) {
+	if (expDate < new Date().toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'})) {
 		throw {type: "not-acceptable", message: "Card ahs already expired"}
 	}
 	return
