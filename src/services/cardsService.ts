@@ -1,5 +1,6 @@
-import { TransactionTypes } from "../repositories/cardRepository.js";
+import { findById, TransactionTypes, update } from "../repositories/cardRepository.js";
 import { faker } from "@faker-js/faker";
+import bcrypt from "bcrypt";
 
 import Cryptr from "cryptr";
 const cryptr = new Cryptr(process.env.PASSWORD);
@@ -7,7 +8,7 @@ const cryptr = new Cryptr(process.env.PASSWORD);
 
 const createCard = (fullName: String, id: number, type: TransactionTypes ) => {
 
-	if(!type || !id) throw {type: "missing", message: "Missing something in the request"}
+	if(!type || !id) throw {type: "bad-request", message: "Missing something in the request"}
 
 	const cardNumber = faker.finance.creditCardNumber();
 	const cardCVC = faker.finance.creditCardCVV();
@@ -28,8 +29,42 @@ const createCard = (fullName: String, id: number, type: TransactionTypes ) => {
 		type
 	}
 
-	return card
+	return {card, cardCVC}
 
+}
+
+const activateCard = async (id: number, cvc: string, password: string) => {
+	const card = await getCard(id)
+	if (card.password) throw {type: "forbidden", message: "Card already activated"}
+
+	securityCodeIsEqual(card.securityCode, cvc)
+	await cardIsExpired(card.expirationDate)
+
+	const hashPassword = bcrypt.hashSync(password, 10);
+
+	await update(id, {password: hashPassword, isBlocked: false})
+	return 
+}
+
+const getCard = async (id: number) => {
+	const card = await findById(id)
+	if(!card) throw {type: "not-found", message: "Card doesnt exist"}
+
+	return card
+}
+
+const cardIsExpired = async (expDate: string) => {
+	if (expDate < new Date().toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'}).slice(3)) {
+		throw {type: "not-acceptable", message: "Card ahs already expired"}
+	}
+	return
+}
+
+const securityCodeIsEqual = (encryptedCVC: string, CVC: string) => {
+	const decriptedCVC = cryptr.decrypt(encryptedCVC);
+	if (decriptedCVC !== CVC) throw {type: "not-acceptable", message: "Wrong cvc number"}
+
+	return
 }
 
 const formatName = (fullname : String) => {
@@ -46,10 +81,11 @@ const formatName = (fullname : String) => {
 const createExpDate = () => {
 	const expDate = new Date();
 	expDate.setFullYear(expDate.getFullYear() + 5)
-	return expDate.toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'}).slice(3)
+	return expDate.toLocaleDateString("en-GB", { year: '2-digit', month: '2-digit'})
 }
 
 
 export {
 	createCard,
+	activateCard,
 }
